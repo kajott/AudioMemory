@@ -233,6 +233,7 @@ function startgame() {
     // reset state and update layout
     selA = selB = -1;
     resize();
+    window.history.pushState("game", "Audio Memory");
 }
 
 function play(sample) {
@@ -278,6 +279,10 @@ function backtomenu() {
     uicfg("menu");
 }
 
+function reinit(ev) {
+    if (ev.state != "game") { backtomenu(); }
+}
+
 function init() {
     var sel = document.getElementById("sampleset");
     for (var i = 0;  i < SampleSets.length;  ++i) {
@@ -287,6 +292,7 @@ function init() {
         sel.appendChild(o);
     }
     selectset();
+    window.onpopstate = reinit;
 }
 
 </script>
