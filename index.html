@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html><head>
+<title>Audio Memory</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style type="text/css">
+
+body {
+    background: #246;
+    overflow: hidden;
+    color: white;
+    text-align: center;
+    font-family: Roboto, sans-serif;
+    font-size: 32px;
+}
+
+audio {
+    display: none;
+}
+
+.cell {
+    position: absolute;
+    cursor: pointer;
+    text-align: center;
+    box-sizing: border-box;
+    border-style: solid;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.cell:hover {
+    background: rgba(0, 0, 0, 0.375);
+}
+
+h1 {
+    font-size: 48px;
+}
+
+button, select {
+    font-family: Roboto, sans-serif;
+    font-size: 32px;
+    background: #579;
+    color: white;
+}
+
+#endgame {
+    z-index:999;
+}
+
+</style>
+<script type="text/javascript" src="samplesets.js"></script>
+<script type="text/javascript">
+
+const CellState = {
+    Idle:         { glyph:"\u{2754}",  border:"#468" },
+    PlayingSound: { glyph:"\u{1f509}", border:"#48c" },
+    PlayingMusic: { glyph:"\u{1f3b5}", border:"#48c" },
+    Wrong:        { glyph:"\u{274c}",  border:"#c64" },
+    Correct:      { glyph:"\u{2714}",  border:"#4c4" },
+};
+
+var sampleSet = "scene";
+var gridWidth = 6;
+var gridHeight = 6;
+var isMusic = false;
+
+var cells = [];
+var samples = [];
+
+var selA = -1;
+var selB = -1;
+
+function cellcfg(idx, state) {
+    var c = cells[idx];
+    if (!c) { return; }
+    c.firstChild.nodeValue = state.glyph;
+    c.style.borderColor = state.border;
+}
+
+function resize() {
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    var cellSpacing = Math.floor(Math.min(
+        w * 0.98 / gridWidth,
+        h * 0.98 / gridHeight));
+    var border = Math.floor(cellSpacing * 0.05);
+    var cellSize = cellSpacing - border;
+    var innerSize = cellSize - 2 * border;
+    var x0 = Math.floor(0.5 * (w - cellSpacing * gridWidth  + cellSpacing - cellSize));
+    var y0 = Math.floor(0.5 * (h - cellSpacing * gridHeight + cellSpacing - cellSize));
+    for (var i = 0;  i < cells.length;  ++i) {
+        var c = cells[i];
+        if (!c) { continue; }
+        var cy = Math.floor(i / gridWidth);
+        var cx = i - cy * gridWidth;
+        c.style.width = c.style.height = cellSize + "px";
+        c.style.lineHeight = innerSize + "px";
+        c.style.fontSize = Math.floor(innerSize * 0.75) + "px";
+        c.style.borderWidth = border + "px";
+        c.style.borderRadius = (border * 3) + "px";
+        c.style.left = (x0 + cx * cellSpacing) + "px";
+        c.style.top  = (y0 + cy * cellSpacing) + "px";
+    }
+}
+
+function resolve() {
+    if ((selA >= 0) && (selB >= 0)) {
+        if (samples[selA] == samples[selB]) {
+            cells[selA].remove();  cells[selA] = null;
+            cells[selB].remove();  cells[selB] = null;
+        } else {
+            cellcfg(selA, CellState.Idle);
+            cellcfg(selB, CellState.Idle);
+        }
+        selA = selB = -1;
+
+        // end of game reached?
+        var isend = true;
+        for (var i = 0;  i < cells.length;  ++i) {
+            if (cells[i]) { isend = false; break; }
+        }
+        if (isend) {
+            document.getElementById("endgame").style.display = "block";
+        }
+    }
+}
+
+function cellclick(ev) {
+    var i = ev.target.dataset.index;
+    resolve();
+    if (!cells[i] || (i == selA) || (i == selB)) {
+        return;  // game already finished, or same icon clicked twice
+    }
+    play(samples[i]);
+    if (selA < 0) {
+        selA = i;
+        cellcfg(i, isMusic ? CellState.PlayingMusic : CellState.PlayingSound);
+    } else if (selB < 0) {
+        selB = i;
+        const state = (samples[selA] == samples[selB]) ? CellState.Correct : CellState.Wrong;
+        cellcfg(selA, state);
+        cellcfg(selB, state);
+    } // else: internal error
+}
+
+function shuffle(a) {
+    for (var i = a.length - 1;  i > 0;  --i) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = a[i];
+        a[i] = a[j];
+        a[j] = t;
+    }
+}
+
+function killcells() {
+    while (cells.length) {
+        var c = cells.pop();
+        if (c) { c.remove(); }
+    }
+}
+
+function startgame() {
+    document.getElementById("endgame").style.display = "none";
+
+    // find sample set
+    for (var i = 0;  i < SampleSets.length;  ++i) {
+        samples = SampleSets[i].files;
+        isMusic = SampleSets[i].music;
+        if (SampleSets[i].name == sampleSet) { break; }
+    }
+
+    // select and shuffle samples
+    shuffle(samples);
+    var ncells = Math.floor(gridWidth * gridHeight / 2);
+    samples = samples.slice(0, ncells).concat(samples.slice(0, ncells));
+    shuffle(samples);
+    if (samples.length < (gridWidth * gridHeight)) {
+        // add empty cell in the center if grid size is odd
+        samples.splice(Math.floor(gridHeight / 2) * gridWidth + Math.floor(gridWidth / 2), 0, null);
+    }
+
+    // create cells
+    killcells();
+    for (var i = 0;  i < samples.length;  ++i) {
+        if (samples[i]) {
+            var c = document.createElement("div");
+            c.appendChild(document.createTextNode("?"));
+            c.className = "cell";
+            c.dataset.index = i;
+            c.addEventListener("click", cellclick);
+            cells.push(c);
+            cellcfg(i, CellState.Idle);
+            document.body.appendChild(c);
+        } else {
+            cells.push(null);
+        }
+    }
+    
+    // reset state and update layout
+    selA = selB = -1;
+    document.getElementById("configui").style.display = "none";
+    resize();
+}
+
+function play(sample) {
+    var a = document.getElementById("player");
+    a.pause();
+    a.src = "samples/" + sampleSet + "/" + sample;
+    a.load();
+    a.play();
+}
+
+function selectsize() {
+    var s = document.getElementById("gridsize").value.split('x');
+    gridWidth = parseInt(s[0]);
+    gridHeight = parseInt(s[1]);
+}
+
+function selectset() {
+    sampleSet = document.getElementById("sampleset").value;
+    var maxsize = 0;
+    for (var i = 0;  i < SampleSets.length;  ++i) {
+        if (SampleSets[i].name == sampleSet) {
+            maxsize = SampleSets[i].files.length * 2 + 1;
+            break;
+        }
+    }
+    var opts = document.getElementById("gridsize");
+    var maxidx = 0;
+    for (var i = 0;  i < opts.children.length;  ++i) {
+        var o = opts.children[i];
+        var s = o.value.split('x');
+        s = parseInt(s[0]) * parseInt(s[1]);
+        if (s <= maxsize) { maxidx = i; }
+        o.disabled = (s > maxsize);
+    }
+    if (opts.selectedIndex > maxidx) {
+        opts.selectedIndex = maxidx;
+    }
+    selectsize();
+}
+
+function backtomenu() {
+    killcells();
+    document.getElementById("endgame").style.display = "none";
+    document.getElementById("configui").style.display = "block";
+}
+
+function init() {
+    var sel = document.getElementById("sampleset");
+    for (var i = 0;  i < SampleSets.length;  ++i) {
+        var o = document.createElement("option");
+        o.value = SampleSets[i].name;
+        o.appendChild(document.createTextNode(SampleSets[i].desc));
+        sel.appendChild(o);
+    }
+    selectset();
+}
+
+</script>
+</head><body onload="init()" onresize="resize()">
+
+<div id="configui">
+<h1>Audio Memory</h1>
+<p>Sample Set:<br><select id="sampleset" onchange="selectset()"></select></p>
+<p>Grid Size:<br><select id="gridsize" onchange="selectsize()">
+<option value="3x3">Tiny (3x3)</option>
+<option value="4x4">Very Small (4x4)</option>
+<option value="5x5">Small (5x5)</option>
+<option value="6x6" selected>Medium (6x6)</option>
+<option value="7x7">Large (7x7)</option>
+<option value="8x8">Huge (8x8)</option>
+<option value="9x9">Immense (9x9)</option>
+<option value="10x10">Gigantic (10x10)</option>
+</select></p>
+<p><button onclick="startgame()">Start Game</button></p>
+</div>
+
+<div id="endgame" style="display:none">
+<h1>Game Finished!</h1>
+<p><button onclick="startgame()">Play Again</button></p>
+<p><button onclick="backtomenu()">Back To Menu</button></p>
+</div>
+
+<audio id="player" onended="resolve()"></audio>
+
+</body></html>
