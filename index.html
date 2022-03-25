@@ -40,9 +40,29 @@ button, select {
     background: #579;
     color: white;
 }
+button {
+    padding: 4px 16px 4px 16px;
+    border-radius: 16px;
+}
+select {
+    padding: 2px;
+    border-radius: 4px;
+}
 
 #endgame {
     z-index:999;
+}
+
+#back {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    border-radius: 100%;
+    color: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+}
+#back:hover {
+    background: rgba(0, 0, 0, 0.125);
 }
 
 </style>
@@ -57,6 +77,12 @@ const CellState = {
     Correct:      { glyph:"\u{2714}",  border:"#4c4" },
 };
 
+const UIStates = [
+    { _id:"configui", _default:false, "menu":true },
+    { _id:"back",     _default:true,  "menu":false },
+    { _id:"endgame",  _default:false, "endgame":true },
+];
+
 var sampleSet = "scene";
 var gridWidth = 6;
 var gridHeight = 6;
@@ -67,6 +93,14 @@ var samples = [];
 
 var selA = -1;
 var selB = -1;
+
+function uicfg(state) {
+    for (var i = 0;  i < UIStates.length;  ++i) {
+        var s = UIStates[i];
+        var e = (s[state] != undefined) ? s[state] : s._default;
+        document.getElementById(s._id).style.display = e ? "block" : "none";
+    }
+}
 
 function cellcfg(idx, state) {
     var c = cells[idx];
@@ -99,6 +133,8 @@ function resize() {
         c.style.left = (x0 + cx * cellSpacing) + "px";
         c.style.top  = (y0 + cy * cellSpacing) + "px";
     }
+    var b = document.getElementById("back");
+    b.style.width = b.style.height = b.style.lineHeight = Math.floor(Math.min(w, h) * 0.05) + "px";
 }
 
 function resolve() {
@@ -118,7 +154,7 @@ function resolve() {
             if (cells[i]) { isend = false; break; }
         }
         if (isend) {
-            document.getElementById("endgame").style.display = "block";
+            uicfg("endgame");
         }
     }
 }
@@ -158,7 +194,7 @@ function killcells() {
 }
 
 function startgame() {
-    document.getElementById("endgame").style.display = "none";
+    uicfg("game");
 
     // find sample set
     for (var i = 0;  i < SampleSets.length;  ++i) {
@@ -196,7 +232,6 @@ function startgame() {
     
     // reset state and update layout
     selA = selB = -1;
-    document.getElementById("configui").style.display = "none";
     resize();
 }
 
@@ -240,8 +275,7 @@ function selectset() {
 
 function backtomenu() {
     killcells();
-    document.getElementById("endgame").style.display = "none";
-    document.getElementById("configui").style.display = "block";
+    uicfg("menu");
 }
 
 function init() {
@@ -257,6 +291,8 @@ function init() {
 
 </script>
 </head><body onload="init()" onresize="resize()">
+
+<div id="back" onclick="backtomenu()" style="display:none">&larr;</div>
 
 <div id="configui">
 <h1>Audio Memory</h1>
