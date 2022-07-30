@@ -252,7 +252,8 @@ function resolve() {
             }
             var msg = null;
             if (playerboxes.length < 2) {
-                // no winner message
+                msg = "You took " + bestScore + " moves to clear "
+                    + Math.floor(gridWidth * gridHeight / 2) + " pairs.";
             } else if (winners.length < 2) {
                 msg = winners.pop() + " won!";
             } else {
@@ -262,9 +263,7 @@ function resolve() {
                 }
                 msg = msg + " and " + winners[winners.length - 1] + "!";
             }
-            var m = document.getElementById("winner");
-            m.style.display = msg ? "block" : "none";
-            if (msg) { m.firstChild.nodeValue = msg; }
+            document.getElementById("winner").firstChild.nodeValue = msg;
             uicfg("endgame");
             resize();
         }
@@ -500,7 +499,7 @@ function init() {
 
 <div id="endgame" style="display:none">
 <h1>Game Finished!</h1>
-<p id="winner"></p>
+<p id="winner">&nbsp;</p>
 <p><button onclick="startgame()">Play Again</button></p>
 <p><button onclick="backtomenu()">Back To Menu</button></p>
 </div>
