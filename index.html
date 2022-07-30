@@ -38,11 +38,31 @@ audio {
     background: rgba(0, 0, 0, 0.375);
 }
 
+.player {
+    position: absolute;
+    cursor: default;
+    text-align: left;
+    box-sizing: border-box;
+    border-style: solid;
+    background: rgba(0, 0, 0, 0.125);
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    border-color: #68a;
+    color: white;
+}
+
+.score {
+    text-align: right;
+    float: right;
+    opacity: 75%;
+}
+
 h1 {
     font-size: 48px;
 }
 
-button, select {
+button, select, input {
     font-family: Roboto, sans-serif;
     font-size: 32px;
     background: #579;
@@ -51,10 +71,24 @@ button, select {
 button {
     padding: 4px 16px 4px 16px;
     border-radius: 16px;
+    border-color: #79b;
 }
-select {
+select, input {
     padding: 2px;
     border-radius: 4px;
+}
+input {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 4px;
+}
+#playernames {
+    padding: 0;
+    margin: 0;
+}
+#playercountbox {
+    margin-bottom: 0;
 }
 
 #endgame {
@@ -95,14 +129,20 @@ var sampleSet = "scene";
 var gridWidth = 6;
 var gridHeight = 6;
 var isMusic = false;
+var players = ["Player 1"];
 
 var cells = [];
 var samples = [];
+var playerboxes = [];
+var scores = [];
 
 var selA = -1;
 var selB = -1;
+var player = 0;
+var uiState = null;
 
 function uicfg(state) {
+    uiState = state;
     for (var i = 0;  i < UIStates.length;  ++i) {
         var s = UIStates[i];
         var e = (s[state] != undefined) ? s[state] : s._default;
@@ -120,14 +160,48 @@ function cellcfg(idx, state) {
 function resize() {
     var w = window.innerWidth;
     var h = window.innerHeight;
+    var x0 = 0, y0 = 0;
+    var margin = Math.floor(Math.min(w, h) * 0.02);
+    var vertical = (h > w) || (uiState == "endgame");
+
+    var playerHeight = Math.floor(Math.min(w, h) * 0.05);
+    var playerWidth = playerHeight * 6;
+    var border = Math.floor(playerHeight * 0.1);
+    var innerSize = playerHeight - 2 * border;
+    var allPlayerHeight = playerboxes.length * (playerHeight + border) - border;
+    var y = vertical ? margin : Math.floor((h - allPlayerHeight) * 0.5);
+    for (var i = 0;  i < playerboxes.length;  ++i) {
+        var p = playerboxes[i];
+        p.style.width = playerWidth + "px";
+        p.style.height = playerHeight + "px";
+        p.style.lineHeight = innerSize + "px";
+        p.style.fontSize = Math.floor(innerSize * 0.75) + "px";
+        p.style.borderWidth = border + "px";
+        p.style.borderRadius = (border * 3) + "px";
+        p.style.paddingLeft = Math.floor(playerHeight * 0.125) + "px";
+        p.style.left = (vertical ? Math.floor((w - playerWidth) * 0.5) : margin) + "px";
+        p.style.top = y + "px";
+        y += playerHeight + border;
+    }
+    if (vertical) {
+        var dy = allPlayerHeight + margin;
+        y0 += dy;
+        h -= dy;
+        document.getElementById("endgame").style.marginTop = (y0 + 24) + "px";
+    } else {
+        var dx = playerWidth + margin;
+        x0 += dx;
+        w -= dx;
+    }
+    
     var cellSpacing = Math.floor(Math.min(
-        w * 0.98 / gridWidth,
-        h * 0.98 / gridHeight));
-    var border = Math.floor(cellSpacing * 0.05);
+        (w - margin) / gridWidth,
+        (h - margin) / gridHeight));
+    border = Math.floor(cellSpacing * 0.05);
     var cellSize = cellSpacing - border;
-    var innerSize = cellSize - 2 * border;
-    var x0 = Math.floor(0.5 * (w - cellSpacing * gridWidth  + cellSpacing - cellSize));
-    var y0 = Math.floor(0.5 * (h - cellSpacing * gridHeight + cellSpacing - cellSize));
+    innerSize = cellSize - 2 * border;
+    x0 += Math.floor(0.5 * (w - cellSpacing * gridWidth  + cellSpacing - cellSize));
+    y0 += Math.floor(0.5 * (h - cellSpacing * gridHeight + cellSpacing - cellSize));
     for (var i = 0;  i < cells.length;  ++i) {
         var c = cells[i];
         if (!c) { continue; }
@@ -145,6 +219,12 @@ function resize() {
     b.style.width = b.style.height = b.style.lineHeight = Math.floor(Math.min(w, h) * 0.05) + "px";
 }
 
+function setplayer(num) {
+    playerboxes[player].style.borderColor = null;
+    player = num % playerboxes.length;
+    playerboxes[player].style.borderColor = "white";
+}
+
 function resolve() {
     if ((selA >= 0) && (selB >= 0)) {
         if (samples[selA] == samples[selB]) {
@@ -153,6 +233,7 @@ function resolve() {
         } else {
             cellcfg(selA, CellState.Idle);
             cellcfg(selB, CellState.Idle);
+            setplayer(player + 1);
         }
         selA = selB = -1;
 
@@ -162,7 +243,30 @@ function resolve() {
             if (cells[i]) { isend = false; break; }
         }
         if (isend) {
+            var bestScore = Math.max(...scores);
+            var winners = [];
+            for (var i = 0;  i < playerboxes.length;  ++i) {
+                var winner = (scores[i] >= bestScore);
+                playerboxes[i].style.borderColor = winner ? "white" : null;
+                if (winner) { winners.push(players[i]); }
+            }
+            var msg = null;
+            if (playerboxes.length < 2) {
+                // no winner message
+            } else if (winners.length < 2) {
+                msg = winners.pop() + " won!";
+            } else {
+                msg = "Draw between " + winners[0];
+                for (var i = 1;  i < (winners.length - 1);  ++i) {
+                    msg = msg + ", " + winners[i];
+                }
+                msg = msg + " and " + winners[winners.length - 1] + "!";
+            }
+            var m = document.getElementById("winner");
+            m.style.display = msg ? "block" : "none";
+            if (msg) { m.firstChild.nodeValue = msg; }
             uicfg("endgame");
+            resize();
         }
     }
 }
@@ -182,6 +286,10 @@ function cellclick(ev) {
         const state = (samples[selA] == samples[selB]) ? CellState.Correct : CellState.Wrong;
         cellcfg(selA, state);
         cellcfg(selB, state);
+        if ((playerboxes.length < 2) || (state == CellState.Correct)) {
+            scores[player] += 1;
+            playerboxes[player].firstChild.firstChild.nodeValue = scores[player] + "\u{a0}";
+        }
     } // else: internal error
 }
 
@@ -197,6 +305,10 @@ function shuffle(a) {
 function killcells() {
     while (cells.length) {
         var c = cells.pop();
+        if (c) { c.remove(); }
+    }
+    while (playerboxes.length) {
+        var c = playerboxes.pop();
         if (c) { c.remove(); }
     }
 }
@@ -237,9 +349,26 @@ function startgame() {
             cells.push(null);
         }
     }
-    
+
+    // create player boxes
+    scores = [];
+    for (var i = 0;  i < players.length;  ++i) {
+        var c = document.createElement("div");
+        c.className = "player";
+        var s = document.createElement("span");
+        s.className = "score";
+        s.appendChild(document.createTextNode("0\u{a0}"));
+        c.appendChild(s);
+        c.appendChild(document.createTextNode(players[i]));
+        playerboxes.push(c);
+        document.body.appendChild(c);
+        scores.push(0);
+    }
+
     // reset state and update layout
     selA = selB = -1;
+    player = 0;
+    setplayer(0);
     resize();
     window.history.pushState("game", "Audio Memory");
 }
@@ -283,12 +412,52 @@ function selectset() {
 }
 
 function backtomenu() {
+    document.getElementById("player").pause();
     killcells();
     uicfg("menu");
+    players2ui();
 }
 
 function reinit(ev) {
     if (ev.state != "game") { backtomenu(); }
+}
+
+function players2ui() {
+    document.getElementById("playercount").textContent = players.length;
+    var n = document.getElementById("playernames");
+    for (var i = n.children.length - 1;  i >= 0;  --i) {
+        if (i < players.length) {
+            n.children[i].value = players[i];
+        } else {
+            n.children[i].remove();
+        }
+    }
+    for (var i = n.children.length;  i < players.length;  ++i) {
+        var c = document.createElement("input");
+        c.value = players[i];
+        n.appendChild(c);
+    }
+}
+
+function ui2players() {
+    var n = document.getElementById("playernames");
+    for (var i = 0;  i < players.length;  ++i) {
+        players[i] = n.children[i].value;
+    }
+}
+
+function addplayer() {
+    if (players.length >= 8) { return; }
+    ui2players();
+    players.push("Player " + (players.length + 1));
+    players2ui();
+}
+
+function removeplayer() {
+    if (players.length <= 1) { return; }
+    ui2players();
+    players.pop();
+    players2ui();
 }
 
 function init() {
@@ -300,6 +469,7 @@ function init() {
         sel.appendChild(o);
     }
     selectset();
+    players2ui();
     window.onpopstate = reinit;
 }
 
@@ -321,11 +491,16 @@ function init() {
 <option value="9x9">Immense (9x9)</option>
 <option value="10x10">Gigantic (10x10)</option>
 </select></p>
+<p id="playercountbox">Players:<br><button onclick="removeplayer()">&minus;</button>
+<span id="playercount"></span>
+<button onclick="addplayer()">+</button></p>
+<p id="playernames"></p>
 <p><button onclick="startgame()">Start Game</button></p>
 </div>
 
 <div id="endgame" style="display:none">
 <h1>Game Finished!</h1>
+<p id="winner"></p>
 <p><button onclick="startgame()">Play Again</button></p>
 <p><button onclick="backtomenu()">Back To Menu</button></p>
 </div>
