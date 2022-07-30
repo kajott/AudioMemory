@@ -435,6 +435,7 @@ function players2ui() {
     for (var i = n.children.length;  i < players.length;  ++i) {
         var c = document.createElement("input");
         c.value = players[i];
+        c.addEventListener("focus", function(ev) { ev.target.select(); });
         n.appendChild(c);
     }
 }
