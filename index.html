@@ -5,12 +5,11 @@
 <style type="text/css">
 
 html {
-    height: 100%;
+    height: 1vh;
 }
 
 body {
-    xx-no-background: #246;
-    height: 100%;
+    height: 1vh;
     background: linear-gradient(#246, #048);
     background-repeat: no-repeat;
     background-attachment: fixed;
@@ -79,6 +78,7 @@ select, input {
 }
 input {
     display: block;
+    max-width: 300px;
     margin-left: auto;
     margin-right: auto;
     margin-top: 4px;
@@ -102,8 +102,22 @@ input {
     border-radius: 100%;
     color: rgba(0, 0, 0, 0.5);
     cursor: pointer;
+    z-index: 0;
 }
 #back:hover {
+    background: rgba(0, 0, 0, 0.125);
+}
+
+#fullscreen {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    border-radius: 100%;
+    cursor: pointer;
+    color: white;
+    z-index: 0;
+}
+#fullscreen:hover {
     background: rgba(0, 0, 0, 0.125);
 }
 
@@ -120,9 +134,10 @@ const CellState = {
 };
 
 const UIStates = [
-    { _id:"configui", _default:false, "menu":true },
-    { _id:"back",     _default:true,  "menu":false },
-    { _id:"endgame",  _default:false, "endgame":true },
+    { _id:"configui",   _default:false, "menu":true },
+    { _id:"back",       _default:true,  "menu":false },
+    { _id:"endgame",    _default:false, "endgame":true },
+    { _id:"fullscreen", _default:false, "menu":true },
 ];
 
 var sampleSet = "scene";
@@ -461,6 +476,12 @@ function removeplayer() {
     players2ui();
 }
 
+function togglefullscreen() {
+    console.log(document.fullscreenElement);
+    if (document.fullscreenElement) { document.exitFullscreen(); }
+    else { document.documentElement.requestFullscreen(); }
+}
+
 function init() {
     var sel = document.getElementById("sampleset");
     for (var i = 0;  i < SampleSets.length;  ++i) {
@@ -478,6 +499,7 @@ function init() {
 </head><body onload="init()" onresize="resize()">
 
 <div id="back" onclick="backtomenu()" style="display:none">&larr;</div>
+<div id="fullscreen" onclick="togglefullscreen()">&#9974;</div>
 
 <div id="configui">
 <h1>Audio Memory</h1>
