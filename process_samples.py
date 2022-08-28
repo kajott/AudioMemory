@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import subprocess
+import shutil
 import json
 import glob
 import sys
@@ -52,11 +53,34 @@ if __name__ == "__main__":
         }
 
         for srcfile in sorted(glob.glob(os.path.join(srcdir, "*.wav"))):
-            destfile = os.path.join(destdir, os.path.splitext(os.path.basename(srcfile))[0].lower() + ".mp3")
+            wavbase = os.path.basename(srcfile)
+            srcprefix = os.path.splitext(srcfile)[0]
+            samplename = os.path.basename(srcprefix).lower()
+            destfile = os.path.join(destdir, samplename + ".mp3")
 
+            # prepare sample record; try to get metadata from various sources
             sample = {}
-
+            sample.update(info.get(wavbase, {}))
+            sample.update(info.get(samplename, {}))
+            sample.update(load_json(srcprefix + ".json"))
             sample['filename'] = destfile.replace('\\', '/')
+            if not sample.get('image'):
+                # try to copy and associate local image file
+                for ext in ('jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'):
+                    imgsrc = srcprefix + '.' + ext
+                    if os.path.isfile(imgsrc):
+                        imgdest = os.path.join(destdir, os.path.basename(imgsrc).lower())
+                        print(imgsrc, '->', imgdest, end=' ')
+                        if os.path.exists(imgdest) and (os.path.getmtime(imgdest) >= os.path.getmtime(imgsrc)):
+                            print("[skip]")
+                        else:
+                            try:
+                                shutil.copy(imgsrc, imgdest)
+                                print("[OK]")
+                            except EnvironmentError as e:
+                                print("[FAILED: {}]".format(e))
+                        sample['image'] = imgdest.replace('\\', '/')
+                        break
             samples.append(sample)
 
             # don't process sample again if already done so

@@ -366,12 +366,16 @@ function cellclick(ev) {
         cellcfg(i, isMusic ? CellState.PlayingMusic : CellState.PlayingSound);
     } else if (selB < 0) {
         selB = i;
-        const state = (samples[selA] == samples[selB]) ? CellState.Correct : CellState.Wrong;
+        const correct = (samples[selA] == samples[selB]);
+        const state = correct ? CellState.Correct : CellState.Wrong;
         cellcfg(selA, state);
         cellcfg(selB, state);
-        if ((playerboxes.length < 2) || (state == CellState.Correct)) {
+        if ((playerboxes.length < 2) || correct) {
             scores[player] += 1;
             playerboxes[player].firstChild.firstChild.nodeValue = scores[player] + "\u{a0}";
+        }
+        if (correct) {
+            setinfo(samples[selA]);
         }
     } // else: internal error
 }
