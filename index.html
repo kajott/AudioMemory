@@ -103,7 +103,7 @@ input {
 }
 
 #endgame {
-    z-index:999;
+    z-index:990;
 }
 
 #back {
@@ -130,6 +130,64 @@ input {
 }
 #fullscreen:hover {
     background: rgba(0, 0, 0, 0.125);
+}
+
+#infos {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999;
+    background: rgba(0, 0, 0, 0.75);
+}
+
+#infobox {
+    position: relative;
+    display: inline-block;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #246;
+    margin: 0;
+    padding: 0 0 16px 0;
+    border: solid 3px #468;
+    border-radius: 16px;
+    text-align: center;
+}
+#infobox, #infobox button {
+    font-size: 20px;
+}
+
+#infobox h3 {
+    margin: 0;
+    padding: 2px;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    background: rgba(0, 0, 0, .5);
+}
+
+#infobox p {
+    margin: 0 16px 0 16px;
+    padding: 0;
+}
+#infobox .title, #infobox .image, #infobox .comment, #infobox .link, #infobox .btn {
+    margin-top: 8px;
+}
+#infobox .title {
+    font-weight: bold;
+}
+#infobox .comment {
+    font-style: italic;
+}
+
+#infobox a {
+    color: #def;
+}
+#infobox a:visited {
+    color: #abc;
+}
+a, a:visited, a:active, a:hover {
+    text-decoration: underline dotted 1px;
 }
 
 </style>
@@ -487,6 +545,48 @@ function removeplayer() {
     players2ui();
 }
 
+function _si_setvis(e, x) {
+    e.style.display = x ? "block" : "none";
+    return x ? 1 : 0;
+}
+function _si_text(data, key, elemID) {
+    var e = document.getElementById(elemID);
+    if (data[key]) { e.firstChild.nodeValue = data[key]; }
+    return _si_setvis(e, data[key]);
+}
+function _si_img(url) {
+    if (url) {
+        if (url.substr(0, 4) != "http") {
+            url = "samples/" + sampleSet + "/" + url;
+        }
+        document.getElementById("info_obj_image").src = url;
+    }
+    return _si_setvis(document.getElementById("info_image"), url);
+}
+function _si_link(url) {
+    if (url) {
+        var e = document.getElementById("info_obj_link");
+        e.href = url;
+        e.firstChild.nodeValue = url;
+    }
+    return _si_setvis(document.getElementById("info_link"), url);
+}
+function setinfo(data) {
+    if ((_si_text(data, "title",        "info_title")
+    +   _si_text(data, "artist",       "info_artist")
+    +   _si_text(data, "album",        "info_atitle")
+    +   _si_img (data["image"])
+    +   _si_text(data, "album_artist", "info_aartist")
+    +   _si_text(data, "comment",      "info_comment")
+    +   _si_link(data["link"])) > 0) {
+        document.getElementById("infos").style.display = "block";
+    }
+}
+
+function closeinfo() {
+    document.getElementById("infos").style.display = "none";
+}
+
 function togglefullscreen() {
     console.log(document.fullscreenElement);
     if (document.fullscreenElement) { document.exitFullscreen(); }
@@ -537,6 +637,19 @@ function init() {
 <p id="winner">&nbsp;</p>
 <p><button onclick="startgame()">Play Again</button></p>
 <p><button onclick="backtomenu()">Back To Menu</button></p>
+</div>
+
+<div id="infos" onclick="closeinfo()" style="display:none">
+<div id="infobox"><h3>What was that?</h3>
+<p id="info_title"   class="title">Title</p>
+<p id="info_artist"  class="artist">Artist</p>
+<p id="info_image"   class="image"><img id="info_obj_image"></p>
+<p id="info_atitle"  class="title">Album Title</p>
+<p id="info_aartist" class="artist">Album Artist</p>
+<p id="info_comment" class="comment">Comment</p>
+<p id="info_link"    class="link"><a id="info_obj_link" href="about:blank" target="_blank">Link</a>
+<p id="info_close"   class="btn"><button onclick="closeinfo()">Continue Game</button></p>
+</div>
 </div>
 
 <audio id="player" onended="resolve()"></audio>
