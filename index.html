@@ -402,7 +402,7 @@ function startgame() {
 
     // find sample set
     for (var i = 0;  i < SampleSets.length;  ++i) {
-        samples = SampleSets[i].files;
+        samples = SampleSets[i].samples;
         isMusic = SampleSets[i].music;
         if (SampleSets[i].name == sampleSet) { break; }
     }
@@ -460,7 +460,7 @@ function startgame() {
 function play(sample) {
     var a = document.getElementById("player");
     a.pause();
-    a.src = "samples/" + sampleSet + "/" + sample;
+    a.src = sample.filename;
     a.load();
     a.play();
 }
@@ -476,7 +476,7 @@ function selectset() {
     var maxsize = 0;
     for (var i = 0;  i < SampleSets.length;  ++i) {
         if (SampleSets[i].name == sampleSet) {
-            maxsize = SampleSets[i].files.length * 2 + 1;
+            maxsize = SampleSets[i].samples.length * 2 + 1;
             break;
         }
     }
@@ -556,9 +556,6 @@ function _si_text(data, key, elemID) {
 }
 function _si_img(url) {
     if (url) {
-        if (url.substr(0, 4) != "http") {
-            url = "samples/" + sampleSet + "/" + url;
-        }
         document.getElementById("info_obj_image").src = url;
     }
     return _si_setvis(document.getElementById("info_image"), url);
