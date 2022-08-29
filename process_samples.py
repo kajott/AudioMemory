@@ -30,8 +30,42 @@ def load_json(filename, expect_type=dict):
         assert isinstance(data, expect_type), "not a valid JSON object"
         return data
     except (EnvironmentError, AssertionError) as e:
-        print(f"WARNING: invalid info JSON file '{infofile}' - {e}")
+        print(f"WARNING: invalid info JSON file '{filename}' - {e}")
         return expect_type()
+
+def load_csv(filename):
+    if not os.path.exists(filename): return {}
+    try:
+        with open(filename, 'rb') as f:
+            header = None
+            data = {}
+            for line in f:
+                line = line.strip()
+                if not line: continue
+                try:
+                    line = line.decode('utf-8')
+                except UnicodeDecodeError:
+                    line = line.decode('windows-1252', 'replace')
+                sep = ';' if (line.count(';') > line.count(',')) else ','
+                if line.count('\t') > line.count(sep):
+                    cells = line.split('\t')
+                else:
+                    parts = re.split(r'(("[^"]*")+|[^!]*)!'.replace('!', sep), line + sep)
+                    assert not(any(parts[::3])), "syntax error (unexpected data between cells)"
+                    cells = [c.replace('""', '"').strip('"') for c in parts[1::3]]
+                if not header:
+                    header = cells
+                    assert 'sample' in header, "'sample' column missing"
+                else:
+                    row = dict(zip(header, cells))
+                    key = row.pop('sample').lower()
+                    if key.endswith(".wav"): key = key[:4]
+                    data[key] = row
+        return data
+    except (EnvironmentError, AssertionError) as e:
+        print(f"WARNING: invalid metadata CSV file '{filename}' - {e}")
+        raise
+        return {}
 
 if __name__ == "__main__":
     sets = []
@@ -51,6 +85,7 @@ if __name__ == "__main__":
             'order':   info.get('order', 0),
             'music':   info.get('music', False),
         }
+        metadata = load_csv(os.path.join(srcdir, "_metadata.csv"))
 
         for srcfile in sorted(glob.glob(os.path.join(srcdir, "*.wav"))):
             wavbase = os.path.basename(srcfile)
@@ -60,6 +95,7 @@ if __name__ == "__main__":
 
             # prepare sample record; try to get metadata from various sources
             sample = {}
+            sample.update(metadata.get(samplename, {}))
             sample.update(info.get(wavbase, {}))
             sample.update(info.get(samplename, {}))
             sample.update(load_json(srcprefix + ".json"))

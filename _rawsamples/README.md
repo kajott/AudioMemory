@@ -80,3 +80,24 @@ name of the sample (with or without `.wav` extension), e.g.:
 	/* [...] */
 }
 ~~~
+
+### Dedicated CSV File
+
+The easiest way to edit metadata in bulk certainly is a spreadsheet application
+like LibreOffice Calc or Microsoft Excel.
+Using that, create a table that contains one column per metadata field
+and one row per sample. In the first row, place a column heading with the
+name of the column. Add a column with the fixed name `sample` to associate
+each row with a sample.
+
+A table with the example above would look like this:
+
+| sample | title | artist | album | comment
+|--------|-------|--------|-------|---------
+| help | Help! | The Beatles | Help! | (1965)
+| letitbe | Let It Be | The Beatles | Let It Be | (1970)
+| bohemian | Bohemian Rhapsody | Queen | A Night at the Opera | (1975)
+
+Save this table as `_metadata.csv` in the sample set directory
+(i.e. along with the `.wav` files and `_info.json`) in CSV format,
+and `process_samples.py` will pick it up from there.
